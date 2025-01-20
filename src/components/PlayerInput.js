@@ -5,7 +5,7 @@ import PlayerTable from "./PlayerTable";
 
 const InputField = ({ inputValue, handleInputChange, handleSubmit, inputRef }) => {
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={(event) => handleSubmit(event, null)}>
       <input
         type="text"
         ref={inputRef}
@@ -41,42 +41,6 @@ const SuggestionList = ({ suggestions, handleSuggestionClick, highlightedIndex, 
   );
 };
 
-// const PlayerTable = ({ rows, correctData }) => {
-//     if (rows.length === 0) return null;
-
-//     return (
-//       <div className="mt-6 overflow-x-auto">
-//         <table className="table-auto w-full">
-//           <thead>
-//             <tr className="bg-gray-300 border border-gray-300">
-//               <th className="px-4 py-2 border border-gray-300">Name</th>
-//               <th className="px-4 py-2 border border-gray-300">Academy</th>
-//               <th className="px-4 py-2 border border-gray-300">Club</th>
-//               <th className="px-4 py-2 border border-gray-300">Weapon Type</th>
-//               <th className="px-4 py-2 border border-gray-300">Age</th>
-//               <th className="px-4 py-2 border border-gray-300">Height</th>
-//             </tr>
-//           </thead>
-//           <tbody className="">
-//             {rows.map((row, index) => (
-//               <tr key={index} className="bg-gray-50">
-//                 <td className={`px-4 py-2 text-center text-xs border border-gray-300`}>{row.Name}</td>
-//                 <td className={`px-4 py-2 text-center text-xs border border-gray-300
-//                                 ${row.Academy === correctData.Academy ? "bg-green-600" : ""}`}>
-//                     {row.Academy}
-//                 </td>
-//                 <td className="px-4 py-2 text-center text-xs border border-gray-300">{row.Club}</td>
-//                 <td className="px-4 py-2 text-center text-xs border border-gray-300">{row["Weapon Type"]}</td>
-//                 <td className="px-4 py-2 text-center text-xs border border-gray-300">{row.Age}</td>
-//                 <td className="px-4 py-2 text-center text-xs border border-gray-300">{row.Height} cm</td>
-//               </tr>
-//             ))}
-//           </tbody>
-//         </table>
-//       </div>
-//     );
-// };
-
 const PlayerInput = () => {
   const [inputValue, setInputValue] = useState("");
   const [allPlayers, setAllPlayers] = useState([]);
@@ -88,7 +52,7 @@ const PlayerInput = () => {
   useEffect(() => {
     const fetchPlayers = async () => {
         try {
-            const response = await axios.get("https://ba-minigames.xyz/init");
+            const response = await axios.get("https://ba-minigames.xyz/api/init");
             const players = response.data;
 
             setAllPlayers(players);
@@ -110,26 +74,25 @@ const PlayerInput = () => {
           const nameSegments = player.Name.split(" ").map((segment) => segment.toLowerCase());
           const value_lower = value.toLowerCase();
   
-          // Assign priority
           let priority = null;
           if (nameSegments[nameSegments.length - 1]?.startsWith(value_lower)) {
-            priority = 1; // Prefix match on last name
+            priority = 1;
           } else if (nameSegments[0]?.startsWith(value_lower)) {
-            priority = 2; // Prefix match on first name
+            priority = 2;
           } else if (nameSegments[0]?.includes(value_lower) || nameSegments[1]?.includes(value_lower)) {
-            priority = 3; // Match any segment of the name
+            priority = 3;
           }
   
           return priority !== null ? { ...player, priority } : null;
         })
-        .filter(Boolean) // Remove null values (non-matches)
-        .sort((a, b) => a.priority - b.priority) // Sort by priority
-        .slice(0, 8); // Limit to 8 results
+        .filter(Boolean)
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 8);
   
       setSuggestions(prioritizedSuggestions);
       setHighlightedIndex(0);
     } else {
-      setSuggestions([]); // Clear suggestions when input is empty
+      setSuggestions([]);
       setHighlightedIndex(-1);
     }
   };
@@ -137,15 +100,12 @@ const PlayerInput = () => {
   const handleKeyDown = (event) => {
     if (suggestions.length > 0) {
       if (event.key === "ArrowDown") {
-        // Move down in the suggestions list
         setHighlightedIndex((prevIndex) => Math.min(prevIndex + 1, suggestions.length - 1));
         event.preventDefault();
       } else if (event.key === "ArrowUp") {
-        // Move up in the suggestions list
         setHighlightedIndex((prevIndex) => Math.max(prevIndex - 1, 0));
         event.preventDefault();
       } else if (event.key === "Enter") {
-        // Submit the currently highlighted suggestion
         if (highlightedIndex >= 0) {
           handleSuggestionClick(suggestions[highlightedIndex]);
           setHighlightedIndex(-1); // Reset the highlight after submission
@@ -156,22 +116,24 @@ const PlayerInput = () => {
   };
 
   const handleSuggestionClick = async (player) => {
-    setInputValue(player.Name);
+    setInputValue("");
     setSuggestions([]);
 
-    handleSubmit(player);
+    handleSubmit(null, player);
   };
 
-  const handleSubmit = async (player) => {
+  const handleSubmit = async (event, player) => {
+    if (event) {
+      event.preventDefault();
+      return; 
+    }
+
     try {
-        const response = await axios.post("https://ba-minigames.xyz/guess", player);
+        const response = await axios.post("https://ba-minigames.xyz/api/guess", player);
         setTableRows((prevRows) => [...prevRows, {player, correctness: response.data}]);
     } catch (err) {
         console.error("Error guessing player:", err);
     }
-
-    setInputValue("");
-    setSuggestions([]);
   };
 
   return (
