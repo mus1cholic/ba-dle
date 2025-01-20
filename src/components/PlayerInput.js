@@ -88,7 +88,7 @@ const PlayerInput = () => {
   useEffect(() => {
     const fetchPlayers = async () => {
         try {
-            const response = await axios.get("https://3.137.198.246:3001/init");
+            const response = await axios.get("https://ba-minigames.xyz/init");
             const players = response.data;
 
             setAllPlayers(players);
@@ -164,7 +164,7 @@ const PlayerInput = () => {
 
   const handleSubmit = async (player) => {
     try {
-        const response = await axios.post("https://3.137.198.246:3001/guess", player);
+        const response = await axios.post("https://ba-minigames.xyz/guess", player);
         setTableRows((prevRows) => [...prevRows, {player, correctness: response.data}]);
     } catch (err) {
         console.error("Error guessing player:", err);
