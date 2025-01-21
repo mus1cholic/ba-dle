@@ -1,18 +1,35 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 import PlayerTable from "./PlayerTable";
 
-const InputField = ({ inputValue, handleInputChange, handleSubmit, inputRef }) => {
+const saveGuessToCookies = (playerName) => {
+  // we are saving guesses as strings, and calling api to load them when page is loaded
+  const cookieName = "student_guesses";
+  const currentGuesses = getGuessesFromCookies();
+
+  const updatedGuesses = [...currentGuesses, playerName];
+
+  Cookies.set(cookieName, JSON.stringify(updatedGuesses), { expires: 7 });
+};
+
+const getGuessesFromCookies = () => {
+  const guesses = Cookies.get("student_guesses");
+
+  return guesses ? JSON.parse(guesses) : [];
+};
+
+const InputField = ({ inputValue, handleInputChange, handleSubmit, inputRef, placeholderText }) => {
   return (
     <form onSubmit={(event) => handleSubmit(event, null)}>
       <input
         type="text"
         ref={inputRef}
-        placeholder="Type a student's name here!"
+        placeholder={placeholderText}
         value={inputValue}
         onChange={handleInputChange}
-        className="border-2 border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-50vw"
+        className="border-2 border-gray-300 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-35vw"
       />
     </form>
   );
@@ -42,6 +59,7 @@ const SuggestionList = ({ suggestions, handleSuggestionClick, highlightedIndex, 
 };
 
 const PlayerInput = () => {
+  const [placeholderText, setPlaceholderText] = useState("Guess the mystery student!")
   const [inputValue, setInputValue] = useState("");
   const [allPlayers, setAllPlayers] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -63,6 +81,23 @@ const PlayerInput = () => {
 
     fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    if (allPlayers.length > 0 && tableRows.length === 0) {
+      const guesses = getGuessesFromCookies();
+
+      guesses.map(async (playerName) => {
+        const player = allPlayers.find((obj) => obj.Name === playerName);
+        try {
+          const response = await axios.post("https://ba-minigames.xyz/api/guess", player);
+
+          setTableRows((prevRows) => [...prevRows, {player, correctness: response.data}]);
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    }
+  }, [allPlayers]);
 
   const handleInputChange = (event) => {
     const value = event.target.value;
@@ -119,6 +154,10 @@ const PlayerInput = () => {
     setInputValue("");
     setSuggestions([]);
 
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+
     handleSubmit(null, player);
   };
 
@@ -128,8 +167,12 @@ const PlayerInput = () => {
       return; 
     }
 
+    setPlaceholderText("Not quite right... try another?");
+
     try {
         const response = await axios.post("https://ba-minigames.xyz/api/guess", player);
+
+        saveGuessToCookies(player.Name);
         setTableRows((prevRows) => [...prevRows, {player, correctness: response.data}]);
     } catch (err) {
         console.error("Error guessing player:", err);
@@ -144,6 +187,7 @@ const PlayerInput = () => {
           handleInputChange={handleInputChange}
           handleSubmit={handleSubmit}
           inputRef={inputRef}
+          placeholderText={placeholderText}
         />
         {suggestions.length > 0 && (
           <SuggestionList

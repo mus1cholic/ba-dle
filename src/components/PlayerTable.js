@@ -3,6 +3,8 @@ import PlayerRow from "./PlayerRow";
 const PlayerTable = ({ rows }) => {
   if (rows.length === 0) return null;
 
+  // console.log(rows);
+
   return (
     <div className="mt-6 overflow-x-auto">
       <table className="table-auto w-full">
